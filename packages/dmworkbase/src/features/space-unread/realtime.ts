@@ -13,8 +13,16 @@ import { getImChannelInfo } from "../../im-runtime/channelRuntime";
 import { spaceUnreadStore } from "./store";
 
 function effectiveGroupSpaceId(groupNo: string): string | undefined {
-  return spaceUnreadStore.getGroupSpaceId(groupNo)
-    || getImChannelInfo(WKSDK.shared(), new Channel(groupNo, ChannelTypeGroup))?.orgData?.space_id;
+  const fromMemberships = spaceUnreadStore.getGroupSpaceId(groupNo);
+  if (fromMemberships) return fromMemberships;
+
+  // Older compatible sync responses already populate this existing map from
+  // conversation.my_source_space_id. External groups must use the member's
+  // source Space before falling back to the group's home Space.
+  const mySourceSpaceId = WKApp.shared.channelMySourceSpaceMap.get(`${groupNo}_${ChannelTypeGroup}`);
+  if (mySourceSpaceId) return mySourceSpaceId;
+
+  return getImChannelInfo(WKSDK.shared(), new Channel(groupNo, ChannelTypeGroup))?.orgData?.space_id;
 }
 
 export function resolveIncomingMessageSpaceId(message: Message): string | undefined {

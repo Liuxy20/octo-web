@@ -66,6 +66,23 @@ describe("cross-Space realtime unread", () => {
       .toBe("space-b");
   });
 
+  it("uses the existing external-group source mapping when the membership sideband is absent", () => {
+    const parent = new Channel("external-group", ChannelTypeGroup);
+    const thread = new Channel("external-group____topic", ChannelTypeCommunityTopic);
+    state.app.shared.channelMySourceSpaceMap.set(
+      `external-group_${ChannelTypeGroup}`,
+      "space-a",
+    );
+    cacheChannelInfo(parent, false, { space_id: "space-remote" });
+
+    expect(spaceUnreadStore.getGroupSpaceId("external-group")).toBeUndefined();
+    expect(resolveIncomingMessageSpaceId(message(parent, "external-group-message"))).toBe("space-a");
+    expect(resolveIncomingMessageSpaceId(message(thread, "external-thread-message"))).toBe("space-a");
+    expect(recordIncomingSpaceUnread(message(parent, "external-group-message"))).toBe(false);
+    expect(recordIncomingSpaceUnread(message(thread, "external-thread-message"))).toBe(false);
+    expect(spaceUnreadStore.getSnapshot().newBySpace).toEqual({});
+  });
+
   it("uses a channel Space prefix when the message payload omits space_id", () => {
     const spaceId = "a1b2c3d4e5f60718293a4b5c6d7e8f90";
     const channel = new Channel(`s${spaceId}_peer`, ChannelTypePerson);
